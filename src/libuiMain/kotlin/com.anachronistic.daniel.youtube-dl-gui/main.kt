@@ -11,6 +11,7 @@ fun main() = appWindow(
     lateinit var scroll: TextArea
     var dlLocation: String = "C:\\Users\\myUsername\\Videos"
     lateinit var dlLocationLabel: Label
+    lateinit var keepVideo: Checkbox
 
     vbox {
         scroll = textarea {
@@ -32,31 +33,33 @@ fun main() = appWindow(
                 }
                 button("Update") {
                     action {
-                        run("\"%cd%\"\\youtube-dl -U -q")
+                        val currentDir = ByteArray(1024).usePinned {
+                            platform.posix.getcwd(it.addressOf(0), 1024)
+                        }!!.toKString()
+                        run("\"$currentDir\"\\youtube-dl -U -q")
                     }
                 }
                 textfield {
                     stretchy = true
                 }.disable()
+                keepVideo = checkbox("Keep video")
                 button("Download") {
                     action {
                         if (scroll.value != "") {
                             if (!scroll.value.contains("\n")) { scroll.append("\n") }
 
-                            val copyYDL = "copy \"%cd%\"\\youtube-dl.exe ${dlLocation}\\youtube-dl.exe"
-                            val copyFFM = " && copy \"%cd%\"\\ffmpeg.exe ${dlLocation}\\ffmpeg.exe"
-                            val changeDrv = " && ${dlLocation.take(2)}"
-                            val changeDir = " && cd ${dlLocation}"
-                            val delYDL = " && del ${dlLocation}\\youtube-dl.exe"
-                            val delFFM = " && del ${dlLocation}\\ffmpeg.exe"
+                            val currentDir = ByteArray(1024).usePinned {
+                                platform.posix.getcwd(it.addressOf(0), 1024)
+                            }!!.toKString()
+                            val changeDrv = "${dlLocation.take(2)}"
+                            val changeDir = " && cd $dlLocation"
 
-                            var command = copyYDL + copyFFM + changeDrv + changeDir
+                            var command = changeDrv + changeDir
                             var links = scroll.value.split("\n") as MutableList<String>
                             links.removeAll { it == "" }
                             for (link in links) {
-                                command += " && \"%cd%\"\\youtube-dl.exe ${link} ${if (true) "-x --audio-format mp3" else ""} --ffmpeg-location \"%cd%\"\\ffmpeg.exe"
+                                command += " && \"$currentDir\"\\youtube-dl.exe $link ${if (!keepVideo.value) "-x --audio-format mp3" else ""} --ffmpeg-location \"$currentDir\"\\ffmpeg.exe"
                             }
-                            command += delYDL + delFFM
                             run(command)
                         }
                     }
@@ -70,6 +73,11 @@ fun main() = appWindow(
 fun notYetImplemented() = MsgBoxError(
     text = "This feature does not yet exist.",
     details = "Please be patient."
+)
+
+fun print(information: String) = MsgBox(
+    text = "Information",
+    details = "Info: $information"
 )
 
 fun run(command: String) = platform.posix.system(command)
