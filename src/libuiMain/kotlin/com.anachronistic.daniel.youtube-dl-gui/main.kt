@@ -64,6 +64,33 @@ fun main() = appWindow(
                         }
                     }
                 }
+                button("Test") {
+                    action {
+//                        if (scroll.value != "") {
+                            if (!scroll.value.contains("\n")) { scroll.append("\n") }
+
+                            val currentDir = ByteArray(1024).usePinned {
+                                platform.posix.getcwd(it.addressOf(0), 1024)
+                            }!!.toKString()
+                            memScoped {
+//                                val args: List<String> = listOf("https://www.youtube.com/watch?v=wFH5UjVtPpM", "-x", "--audio-format", "mp3")
+                                val args = listOf("C:\\utils\\youtube-dl.exe", "https://www.youtube.com/watch?v=wFH5UjVtPpM", "-x", "--audio-format", "mp3", "\u0000")
+                                val result = platform.posix.spawnv(P_WAIT, "C:\\utils\\youtube-dl.exe", args.toCStringArray(this))
+                                print("Code $result")
+                            }
+//                            val changeDrv = "${dlLocation.take(2)}"
+//                            val changeDir = " && cd $dlLocation"
+//
+//                            var command = changeDrv + changeDir
+//                            var links = scroll.value.split("\n") as MutableList<String>
+//                            links.removeAll { it == "" }
+//                            for (link in links) {
+//                                command += " && \"$currentDir\"\\youtube-dl.exe $link ${if (!keepVideo.value) "-x --audio-format mp3" else ""} --ffmpeg-location \"$currentDir\"\\ffmpeg.exe"
+//                            }
+//                            run(command)
+//                        }
+                    }
+                }
             }
         }
         stretchy = true
