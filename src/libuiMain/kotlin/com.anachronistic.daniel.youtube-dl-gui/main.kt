@@ -8,7 +8,7 @@ fun main() = appWindow(
     height = 250
 ) {
     lateinit var scroll: TextArea
-    var dlLocation = "C:\\Users\\myUsername\\Videos"
+    var dlLocation = currentLocation()
     lateinit var dlLocationField: TextField
     lateinit var keepVideo: Checkbox
 
@@ -38,10 +38,7 @@ fun main() = appWindow(
             hbox {
                 button("Update") {
                     action {
-                        val currentDir = ByteArray(1024).usePinned {
-                            getcwd(it.addressOf(0), 1024)
-                        }!!.toKString()
-                        run("\"$currentDir\"\\youtube-dl -U -q")
+                        run("\"${currentLocation()}\"\\youtube-dl -U -q")
                     }
                 }
                 label("") {
@@ -53,10 +50,8 @@ fun main() = appWindow(
                         if (scroll.value != "") {
                             if (!scroll.value.contains("\n")) { scroll.append("\n") }
 
-                            val currentDir = ByteArray(1024).usePinned {
-                                getcwd(it.addressOf(0), 1024)
-                            }!!.toKString()
-                            val changeDrv = "${dlLocation.take(2)}"
+                            val currentDir = currentLocation()
+                            val changeDrv = dlLocation.take(2)
                             val changeDir = " && cd $dlLocation"
 
                             var command = changeDrv + changeDir
@@ -86,3 +81,7 @@ fun print(information: String) = MsgBox(
 )
 
 fun run(command: String) = system(command)
+
+fun currentLocation(): String = ByteArray(1024).usePinned {
+    getcwd(it.addressOf(0), 1024)
+}!!.toKString()
