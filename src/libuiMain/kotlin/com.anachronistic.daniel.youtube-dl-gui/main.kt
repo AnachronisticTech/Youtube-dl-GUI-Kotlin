@@ -1,5 +1,4 @@
 import libui.ktx.*
-import libui.ktx.draw.*
 import platform.posix.*
 import kotlinx.cinterop.*
 
@@ -9,8 +8,8 @@ fun main() = appWindow(
     height = 250
 ) {
     lateinit var scroll: TextArea
-    var dlLocation: String = "C:\\Users\\myUsername\\Videos"
-    lateinit var dlLocationLabel: Label
+    var dlLocation = "C:\\Users\\myUsername\\Videos"
+    lateinit var dlLocationField: TextField
     lateinit var keepVideo: Checkbox
 
     vbox {
@@ -21,27 +20,33 @@ fun main() = appWindow(
         separator()
         vbox {
             hbox {
-                label("Download location:")
-                dlLocationLabel = label(dlLocation)
-            }
-            hbox {
-                button("Set download location") {
+                dlLocationField = textfield {
+                    label("Download location:")
+                    stretchy = true
+                    value = dlLocation
                     action {
-                        dlLocation = OpenFolderDialog() ?: dlLocation
-                        dlLocationLabel.text = dlLocation
+                        dlLocation = this.value
                     }
                 }
+                button("Choose location") {
+                    action {
+                        dlLocation = OpenFolderDialog() ?: dlLocation
+                        dlLocationField.value = dlLocation
+                    }
+                }
+            }
+            hbox {
                 button("Update") {
                     action {
                         val currentDir = ByteArray(1024).usePinned {
-                            platform.posix.getcwd(it.addressOf(0), 1024)
+                            getcwd(it.addressOf(0), 1024)
                         }!!.toKString()
                         run("\"$currentDir\"\\youtube-dl -U -q")
                     }
                 }
-                textfield {
+                label("") {
                     stretchy = true
-                }.disable()
+                }
                 keepVideo = checkbox("Keep video")
                 button("Download") {
                     action {
@@ -49,7 +54,7 @@ fun main() = appWindow(
                             if (!scroll.value.contains("\n")) { scroll.append("\n") }
 
                             val currentDir = ByteArray(1024).usePinned {
-                                platform.posix.getcwd(it.addressOf(0), 1024)
+                                getcwd(it.addressOf(0), 1024)
                             }!!.toKString()
                             val changeDrv = "${dlLocation.take(2)}"
                             val changeDir = " && cd $dlLocation"
@@ -80,4 +85,4 @@ fun print(information: String) = MsgBox(
     details = "Info: $information"
 )
 
-fun run(command: String) = platform.posix.system(command)
+fun run(command: String) = system(command)
