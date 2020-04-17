@@ -38,7 +38,8 @@ fun main() = appWindow(
             hbox {
                 button("Update") {
                     action {
-                        run("\"${currentLocation()}\"\\youtube-dl -U -q")
+                        val path = ydlLocation()
+                        system("\"$path\" -U -q")
                     }
                 }
                 label("") {
@@ -48,19 +49,13 @@ fun main() = appWindow(
                 button("Download") {
                     action {
                         if (scroll.value != "") {
-                            if (!scroll.value.contains("\n")) { scroll.append("\n") }
+                            val path = ydlLocation()
 
-                            val currentDir = currentLocation()
-                            val changeDrv = dlLocation.take(2)
-                            val changeDir = " && cd $dlLocation"
-
-                            var command = changeDrv + changeDir
-                            var links = scroll.value.split("\n") as MutableList<String>
-                            links.removeAll { it == "" }
+                            val links = scroll.value.lines() as MutableList<String>
+                            links.removeAll { it == "" || it == "\n" }
                             for (link in links) {
-                                command += " && \"$currentDir\"\\youtube-dl.exe $link ${if (!keepVideo.value) "-x --audio-format mp3" else ""} --ffmpeg-location \"$currentDir\"\\ffmpeg.exe"
+                                system("$path $link ${if (!keepVideo.value) "-x --audio-format mp3" else ""} -o \"$dlLocation\"\\%(title)s-%(id)s.%(ext)s")
                             }
-                            run(command)
                         }
                     }
                 }
@@ -80,7 +75,21 @@ fun print(information: String) = MsgBox(
     details = "Info: $information"
 )
 
-fun run(command: String) = system(command)
+fun ydlLocation(): String {
+    return if (system("youtube-dl --help") != 0) {
+        val localCopy = "\"${currentLocation()}\"\\youtube-dl.exe"
+        if (system("$localCopy --help") != 0) {
+            MsgBoxError(
+                text = "Youtube-dl not found",
+                details = "You can download it from https://github.com/ytdl-org/youtube-dl/releases."
+            )
+            exit(1)
+        }
+        localCopy
+    } else {
+        "youtube-dl"
+    }
+}
 
 fun currentLocation(): String = ByteArray(1024).usePinned {
     getcwd(it.addressOf(0), 1024)
