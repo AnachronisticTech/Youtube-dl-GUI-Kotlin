@@ -66,6 +66,7 @@ fun TabPane.Page.links() = vbox {
             button("Download") {
                 action {
                     if (scroll.value != "") {
+                        if (!scroll.value.contains("\n")) { scroll.append("\n") }
                         val path = ydlLocation()
 
                         val links = scroll.value.lines() as MutableList<String>
