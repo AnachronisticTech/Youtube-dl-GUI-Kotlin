@@ -2,66 +2,170 @@ import libui.ktx.*
 import platform.posix.*
 import kotlinx.cinterop.*
 
+var ignoreErrors = false
+var noPlaylist = false
+var noPartFiles = false
+var audioFormat = "none"
+var keepVideo = false
+var filenameTemplate = "%(title)s-%(id)s.%(ext)s"
+var username = ""
+var password = ""
+
 fun main() = appWindow(
     title = "Youtube-DL GUI",
-    width = 480,
-    height = 250
+    width = 550,
+    height = 350
 ) {
-    lateinit var scroll: TextArea
+    tabpane {
+        page("Links") {
+            links()
+        }
+        page("Advanced settings") {
+            settings()
+        }
+    }
+
+}
+
+fun TabPane.Page.links() = vbox {
     var dlLocation = currentLocation()
     lateinit var dlLocationField: TextField
-    lateinit var keepVideo: Checkbox
 
+    val scroll: TextArea = textarea {
+        label("Insert links here:")
+        stretchy = true
+    }
+    separator()
     vbox {
-        scroll = textarea {
-            label("Links")
-            stretchy = true
-        }
-        separator()
-        vbox {
-            hbox {
-                dlLocationField = textfield {
-                    label("Download location:")
-                    stretchy = true
-                    value = dlLocation
-                    action {
-                        dlLocation = this.value
-                    }
-                }
-                button("Choose location") {
-                    action {
-                        dlLocation = OpenFolderDialog() ?: dlLocation
-                        dlLocationField.value = dlLocation
-                    }
+        hbox {
+            dlLocationField = textfield {
+                label("Download location:")
+                stretchy = true
+                value = dlLocation
+                action {
+                    dlLocation = this.value
                 }
             }
-            hbox {
-                button("Update") {
-                    action {
+            button("Choose location") {
+                action {
+                    dlLocation = OpenFolderDialog() ?: dlLocation
+                    dlLocationField.value = dlLocation
+                }
+            }
+        }
+        hbox {
+            button("Update") {
+                action {
+                    val path = ydlLocation()
+                    system("\"$path\" -U -q")
+                }
+            }
+            label("") {
+                stretchy = true
+            }
+            button("Download") {
+                action {
+                    if (scroll.value != "") {
                         val path = ydlLocation()
-                        system("\"$path\" -U -q")
-                    }
-                }
-                label("") {
-                    stretchy = true
-                }
-                keepVideo = checkbox("Keep video")
-                button("Download") {
-                    action {
-                        if (scroll.value != "") {
-                            val path = ydlLocation()
 
-                            val links = scroll.value.lines() as MutableList<String>
-                            links.removeAll { it == "" || it == "\n" }
-                            for (link in links) {
-                                system("$path $link ${if (!keepVideo.value) "-x --audio-format mp3" else ""} -o \"$dlLocation\"\\%(title)s-%(id)s.%(ext)s")
+                        val links = scroll.value.lines() as MutableList<String>
+                        links.removeAll { it == "" || it == "\n" }
+                        for (link in links) {
+                            var command = "$path $link -o \"$dlLocation\"\\$filenameTemplate"
+                            if (ignoreErrors) command += " -i"
+                            if (noPlaylist) command += " --no-playlist"
+                            if (noPartFiles) command += " --no-part"
+                            if (audioFormat != "none") {
+                                command += " -x --audio-format $audioFormat"
+                                if (keepVideo) command += " -k"
                             }
+                            if (username != "" && password != "") {
+                                command += " -u $username -p $password"
+                            }
+                            system(command)
                         }
                     }
                 }
             }
         }
-        stretchy = true
+    }
+    stretchy = true
+}
+
+fun TabPane.Page.settings() = vbox {
+    group("Options").hbox {
+        checkbox("Ignore errors") {
+            action {
+                ignoreErrors = this.value
+            }
+        }
+        checkbox("No playlist") {
+            action {
+                noPlaylist = this.value
+            }
+        }
+        checkbox("No part files") {
+            action {
+                noPartFiles = this.value
+            }
+        }
+    }
+    group("Extract Audio").hbox {
+        slider(0, 8) {
+            val format = label("None")
+            action {
+                format.text = when (this.value) {
+                    1 -> "Best"
+                    2 -> "AAC"
+                    3 -> "FLAC"
+                    4 -> "MP3"
+                    5 -> "M4A"
+                    6 -> "Opus"
+                    7 -> "Vorbis"
+                    8 -> "wav"
+                    else -> "None"
+                }
+                audioFormat = format.text.toLowerCase()
+            }
+        }
+        checkbox("Keep video") {
+            action {
+                keepVideo = this.value
+            }
+        }
+    }
+    group("Filename Template").hbox {
+        textfield {
+            stretchy = true
+            value = "%(title)s-%(id)s.%(ext)s"
+            action {
+                filenameTemplate = this.value
+            }
+        }
+    }
+    group("Authentication (ignored if empty)").vbox {
+        textfield {
+            label("Username")
+            action {
+                username = this.value
+            }
+        }
+        passwordfield {
+            label("Password")
+            action {
+                password = this.value
+            }
+        }
+    }
+    hbox {
+        label("") {
+            stretchy = true
+        }
+        button("Set default settings") {
+            action {
+                notYetImplemented()
+            }
+        }
     }
 }
 
