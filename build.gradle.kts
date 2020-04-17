@@ -1,5 +1,6 @@
 plugins {
     kotlin("multiplatform") version "1.3.70"
+    kotlin("plugin.serialization") version "1.3.70"
 }
 
 repositories {
@@ -23,6 +24,7 @@ kotlin {
     val libuiMain by sourceSets.getting {
         dependencies {
             implementation("com.github.msink:libui:0.1.7")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-native:0.20.0")
         }
     }
 }

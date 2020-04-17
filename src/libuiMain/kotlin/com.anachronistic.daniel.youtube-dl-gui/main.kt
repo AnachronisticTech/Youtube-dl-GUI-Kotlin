@@ -1,33 +1,52 @@
 import libui.ktx.*
 import platform.posix.*
 import kotlinx.cinterop.*
+import kotlinx.serialization.*
+import kotlinx.serialization.json.Json
 
-var ignoreErrors = false
-var noPlaylist = false
-var noPartFiles = false
-var audioFormat = "none"
-var keepVideo = false
-var filenameTemplate = "%(title)s-%(id)s.%(ext)s"
-var username = ""
-var password = ""
+@Serializable
+data class Settings(
+    var ignoreErrors: Boolean = false,
+    var noPlaylist: Boolean = false,
+    var noPartFiles: Boolean = false,
+    var audioFormat: Int = 0,
+    var keepVideo: Boolean = false,
+    var filenameTemplate: String = "%(title)s-%(id)s.%(ext)s",
+    var username: String = "",
+    var password: String = ""
+)
+
+enum class AudioFormat {
+    None, Best, AAC, FLAC, MP3, M4A, Opus, Vorbis, wav;
+}
+
+var settings = Settings()
 
 fun main() = appWindow(
     title = "Youtube-DL GUI",
     width = 550,
     height = 350
 ) {
-    tabpane {
-        page("Links") {
-            links()
-        }
-        page("Advanced settings") {
-            settings()
+    val file = fopen("config.txt", "r")
+    if (file != null) {
+        memScoped {
+            val bufferLength = 64 * 1024
+            val buffer = allocArray<ByteVar>(bufferLength)
+            val line = fgets(buffer, bufferLength, file)!!.toKString()
+            settings = Json.parse(Settings.serializer(), line)
         }
     }
-
+    tabpane {
+        page("Links") {
+            linksPage()
+        }
+        page("Advanced settings") {
+            settingsPage()
+        }
+    }
 }
 
-fun TabPane.Page.links() = vbox {
+fun TabPane.Page.linksPage() = vbox {
     var dlLocation = currentLocation()
     lateinit var dlLocationField: TextField
 
@@ -72,16 +91,16 @@ fun TabPane.Page.links() = vbox {
                         val links = scroll.value.lines() as MutableList<String>
                         links.removeAll { it == "" || it == "\n" }
                         for (link in links) {
-                            var command = "$path $link -o \"$dlLocation\"\\$filenameTemplate"
-                            if (ignoreErrors) command += " -i"
-                            if (noPlaylist) command += " --no-playlist"
-                            if (noPartFiles) command += " --no-part"
-                            if (audioFormat != "none") {
-                                command += " -x --audio-format $audioFormat"
-                                if (keepVideo) command += " -k"
+                            var command = "$path $link -o \"$dlLocation\"\\${settings.filenameTemplate}"
+                            if (settings.ignoreErrors) command += " -i"
+                            if (settings.noPlaylist) command += " --no-playlist"
+                            if (settings.noPartFiles) command += " --no-part"
+                            if (settings.audioFormat != 0) {
+                                command += " -x --audio-format ${AudioFormat.values()[settings.audioFormat].name.toLowerCase()}"
+                                if (settings.keepVideo) command += " -k"
                             }
-                            if (username != "" && password != "") {
-                                command += " -u $username -p $password"
+                            if (settings.username != "" && settings.password != "") {
+                                command += " -u ${settings.username} -p ${settings.password}"
                             }
                             system(command)
                         }
@@ -93,68 +112,66 @@ fun TabPane.Page.links() = vbox {
     stretchy = true
 }
 
-fun TabPane.Page.settings() = vbox {
+fun TabPane.Page.settingsPage() = vbox {
     group("Options").hbox {
         checkbox("Ignore errors") {
+            value = settings.ignoreErrors
             action {
-                ignoreErrors = this.value
+                settings.ignoreErrors = this.value
             }
         }
         checkbox("No playlist") {
+            value = settings.noPlaylist
             action {
-                noPlaylist = this.value
+                settings.noPlaylist = this.value
             }
         }
         checkbox("No part files") {
+            settings.noPartFiles
             action {
-                noPartFiles = this.value
+                settings.noPartFiles = this.value
             }
         }
     }
     group("Extract Audio").hbox {
         slider(0, 8) {
             val format = label("None")
+            value = settings.audioFormat
+            format.text = AudioFormat.values()[value].name
             action {
-                format.text = when (this.value) {
-                    1 -> "Best"
-                    2 -> "AAC"
-                    3 -> "FLAC"
-                    4 -> "MP3"
-                    5 -> "M4A"
-                    6 -> "Opus"
-                    7 -> "Vorbis"
-                    8 -> "wav"
-                    else -> "None"
-                }
-                audioFormat = format.text.toLowerCase()
+                format.text = AudioFormat.values()[this.value].name
+                settings.audioFormat = this.value
             }
         }
         checkbox("Keep video") {
+            value = settings.keepVideo
             action {
-                keepVideo = this.value
+                settings.keepVideo = this.value
             }
         }
     }
     group("Filename Template").hbox {
         textfield {
             stretchy = true
-            value = "%(title)s-%(id)s.%(ext)s"
+            value = settings.filenameTemplate
             action {
-                filenameTemplate = this.value
+                settings.filenameTemplate = this.value
             }
         }
     }
     group("Authentication (ignored if empty)").vbox {
         textfield {
             label("Username")
+            value = settings.username
             action {
-                username = this.value
+                settings.username = this.value
             }
         }
         passwordfield {
             label("Password")
+            value = settings.password
             action {
-                password = this.value
+                settings.password = this.value
             }
         }
     }
@@ -162,9 +179,14 @@ fun TabPane.Page.settings() = vbox {
         label("") {
             stretchy = true
         }
-        button("Set default settings") {
+        button("Save settings as defaults") {
             action {
-                notYetImplemented()
+                memScoped {
+                    val jsonData = Json.stringify(Settings.serializer(), settings).cstr
+                    val file = fopen("config.txt", "w")
+                    fwrite(jsonData, 1u, jsonData.size.toUInt(), file)
+                    fclose(file)
+                }
             }
         }
     }
