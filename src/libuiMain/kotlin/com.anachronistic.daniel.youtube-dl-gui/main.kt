@@ -13,14 +13,21 @@ data class Settings(
     var keepVideo: Boolean = false,
     var filenameTemplate: String = "%(title)s-%(id)s.%(ext)s",
     var username: String = "",
-    var password: String = ""
+    var password: String = "",
+    var ffmpegLocation: String = ""
 )
 
 enum class AudioFormat {
     None, Best, AAC, FLAC, MP3, M4A, Opus, Vorbis, Wav;
 }
 
+enum class Location {
+    PATH, DIR, SET, NONE
+}
+
 var settings = Settings()
+var ffmpegOk = false
+var ffmpegLocation = Location.NONE
 val delimiter = when (Platform.osFamily) {
     OsFamily.WINDOWS -> "\\"
     else -> "/"
@@ -39,6 +46,7 @@ fun main() = appWindow(
             val buffer = allocArray<ByteVar>(bufferLength)
             val line = fgets(buffer, bufferLength, file)!!.toKString()
             settings = Json.parse(Settings.serializer(), line)
+            fclose(file)
         }
     }
     tabpane {
@@ -92,6 +100,7 @@ fun TabPane.Page.linksPage() = vbox {
                     if (scroll.value != "") {
                         if (!scroll.value.contains("\n")) { scroll.append("\n") }
                         val path = ydlLocation()
+                        ffmpegLocation()
 
                         val links = scroll.value.lines() as MutableList<String>
                         links.removeAll { it == "" || it == "\n" }
@@ -100,9 +109,14 @@ fun TabPane.Page.linksPage() = vbox {
                             if (settings.ignoreErrors) command += " -i"
                             if (settings.noPlaylist) command += " --no-playlist"
                             if (settings.noPartFiles) command += " --no-part"
-                            if (settings.audioFormat != 0) {
+                            if (settings.audioFormat != 0 && ffmpegOk) {
                                 command += " -x --audio-format ${AudioFormat.values()[settings.audioFormat].name.toLowerCase()}"
                                 if (settings.keepVideo) command += " -k"
+                                if (ffmpegLocation == Location.SET) command += " --ffmpeg-location \"${settings.ffmpegLocation}\""
+                                if (ffmpegLocation == Location.DIR) command += " --ffmpeg-location \"${currentLocation()}${delimiter}ffmpeg.exe\""
+                            } else if (!ffmpegOk) {
+                                print("FFmpeg was not found on the path, in the current directory, or in the Advanced Settings location.")
+                                return@action
                             }
                             if (settings.username != "" && settings.password != "") {
                                 command += " -u ${settings.username} -p ${settings.password}"
@@ -119,6 +133,7 @@ fun TabPane.Page.linksPage() = vbox {
 
 @UnstableDefault
 fun TabPane.Page.settingsPage() = vbox {
+    lateinit var ffmpegLocation: TextField
     group("Options").hbox {
         checkbox("Ignore errors") {
             value = settings.ignoreErrors
@@ -181,6 +196,21 @@ fun TabPane.Page.settingsPage() = vbox {
             }
         }
     }
+    group("FFmpeg location").hbox {
+        ffmpegLocation = textfield {
+            stretchy = true
+            value = settings.ffmpegLocation
+            action {
+                settings.ffmpegLocation = value
+            }
+        }
+        button("Locate") {
+            action {
+                ffmpegLocation.value = OpenFileDialog() ?: ""
+                settings.ffmpegLocation = ffmpegLocation.value
+            }
+        }
+    }
     hbox {
         label("") {
             stretchy = true
@@ -210,7 +240,7 @@ fun print(information: String) = MsgBox(
 
 fun ydlLocation(): String {
     return if (system("youtube-dl --version") != 0) {
-        val localCopy = "\"${currentLocation()}\"\\youtube-dl.exe"
+        val localCopy = "\"${currentLocation()}${delimiter}youtube-dl\""
         if (system("$localCopy --help") != 0) {
             MsgBoxError(
                 text = "Youtube-dl not found",
@@ -221,6 +251,32 @@ fun ydlLocation(): String {
         localCopy
     } else {
         "youtube-dl"
+    }
+}
+
+fun ffmpegLocation() {
+    fun ffmpegExists() {
+        if (system("${currentLocation()}${delimiter}ffmpeg -version") == 0) {
+            ffmpegOk = true
+            ffmpegLocation = Location.DIR
+        } else if (system("ffmpeg -version") == 0) {
+            ffmpegOk = true
+            ffmpegLocation = Location.PATH
+        } else {
+            ffmpegOk = false
+            ffmpegLocation = Location.NONE
+        }
+    }
+
+    if (settings.ffmpegLocation == "") {
+        ffmpegExists()
+    } else {
+        if (system("${settings.ffmpegLocation} -version") == 0) {
+            ffmpegOk = true
+            ffmpegLocation = Location.SET
+        } else {
+            ffmpegExists()
+        }
     }
 }
 
