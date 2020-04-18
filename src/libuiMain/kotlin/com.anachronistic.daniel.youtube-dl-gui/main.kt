@@ -17,15 +17,16 @@ data class Settings(
 )
 
 enum class AudioFormat {
-    None, Best, AAC, FLAC, MP3, M4A, Opus, Vorbis, wav;
+    None, Best, AAC, FLAC, MP3, M4A, Opus, Vorbis, Wav;
 }
 
 var settings = Settings()
-val delimiter = when (kotlin.native.Platform.osFamily) {
+val delimiter = when (Platform.osFamily) {
     OsFamily.WINDOWS -> "\\"
     else -> "/"
 }
 
+@UnstableDefault
 fun main() = appWindow(
     title = "Youtube-DL GUI",
     width = 550,
@@ -116,6 +117,7 @@ fun TabPane.Page.linksPage() = vbox {
     stretchy = true
 }
 
+@UnstableDefault
 fun TabPane.Page.settingsPage() = vbox {
     group("Options").hbox {
         checkbox("Ignore errors") {
@@ -188,7 +190,7 @@ fun TabPane.Page.settingsPage() = vbox {
                 memScoped {
                     val jsonData = Json.stringify(Settings.serializer(), settings).cstr
                     val file = fopen("config.txt", "w")
-                    fwrite(jsonData, 1u, jsonData.size.toULong(), file)
+                    fwrite(jsonData, 1u, jsonData.size.toUInt(), file) // use .toULong() on macOS
                     fclose(file)
                 }
             }
@@ -223,5 +225,5 @@ fun ydlLocation(): String {
 }
 
 fun currentLocation(): String = ByteArray(1024).usePinned {
-    getcwd(it.addressOf(0), 1024u)
+    getcwd(it.addressOf(0), 1024) // use 1024u on macOS
 }!!.toKString()
