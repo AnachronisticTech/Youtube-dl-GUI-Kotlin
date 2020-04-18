@@ -218,10 +218,13 @@ fun TabPane.Page.settingsPage() = vbox {
         button("Save settings as defaults") {
             action {
                 memScoped {
-                    val jsonData = Json.stringify(Settings.serializer(), settings).cstr
+                    val jsonData = Json.stringify(Settings.serializer(), settings)
                     val file = fopen("config.txt", "w")
-                    fwrite(jsonData, 1u, jsonData.size.toUInt(), file) // use .toULong() on macOS
-                    fclose(file)
+                    try {
+                        fputs(jsonData, file)
+                    } finally {
+                        fclose(file)
+                    }
                 }
             }
         }
