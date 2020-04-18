@@ -21,6 +21,10 @@ enum class AudioFormat {
 }
 
 var settings = Settings()
+val delimiter = when (kotlin.native.Platform.osFamily) {
+    OsFamily.WINDOWS -> "\\"
+    else -> "/"
+}
 
 fun main() = appWindow(
     title = "Youtube-DL GUI",
@@ -91,7 +95,7 @@ fun TabPane.Page.linksPage() = vbox {
                         val links = scroll.value.lines() as MutableList<String>
                         links.removeAll { it == "" || it == "\n" }
                         for (link in links) {
-                            var command = "$path $link -o \"$dlLocation\"\\${settings.filenameTemplate}"
+                            var command = "$path $link -o \"$dlLocation$delimiter${settings.filenameTemplate}\""
                             if (settings.ignoreErrors) command += " -i"
                             if (settings.noPlaylist) command += " --no-playlist"
                             if (settings.noPartFiles) command += " --no-part"
@@ -184,7 +188,7 @@ fun TabPane.Page.settingsPage() = vbox {
                 memScoped {
                     val jsonData = Json.stringify(Settings.serializer(), settings).cstr
                     val file = fopen("config.txt", "w")
-                    fwrite(jsonData, 1u, jsonData.size.toUInt(), file)
+                    fwrite(jsonData, 1u, jsonData.size.toULong(), file)
                     fclose(file)
                 }
             }
@@ -203,7 +207,7 @@ fun print(information: String) = MsgBox(
 )
 
 fun ydlLocation(): String {
-    return if (system("youtube-dl --help") != 0) {
+    return if (system("youtube-dl --version") != 0) {
         val localCopy = "\"${currentLocation()}\"\\youtube-dl.exe"
         if (system("$localCopy --help") != 0) {
             MsgBoxError(
@@ -219,5 +223,5 @@ fun ydlLocation(): String {
 }
 
 fun currentLocation(): String = ByteArray(1024).usePinned {
-    getcwd(it.addressOf(0), 1024)
+    getcwd(it.addressOf(0), 1024u)
 }!!.toKString()
