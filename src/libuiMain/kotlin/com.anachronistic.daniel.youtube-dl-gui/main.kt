@@ -26,7 +26,6 @@ enum class Location {
 }
 
 var settings = Settings()
-var ffmpegOk = false
 var ffmpegLocation = Location.NONE
 val delimiter = when (Platform.osFamily) {
     OsFamily.WINDOWS -> "\\"
@@ -109,13 +108,13 @@ fun TabPane.Page.linksPage() = vbox {
                             if (settings.noPlaylist) command += " --no-playlist"
                             if (settings.noPartFiles) command += " --no-part"
                             if (settings.audioFormat != 0) {
-                                ffmpegLocation()
-                                if (ffmpegOk) {
+
+                                if (ffmpegLocation()) {
                                     command += " -x --audio-format ${AudioFormat.values()[settings.audioFormat].name.toLowerCase()}"
                                     if (settings.keepVideo) command += " -k"
                                     if (ffmpegLocation == Location.SET) command += " --ffmpeg-location \"${settings.ffmpegLocation}\""
                                     if (ffmpegLocation == Location.DIR) command += " --ffmpeg-location \"${currentLocation()}${delimiter}ffmpeg.exe\""
-                                } else if (!ffmpegOk) {
+                                } else {
                                     print("FFmpeg was not found on the path, in the current directory, or in the Advanced Settings location.")
                                     return@action
                                 }
@@ -259,26 +258,28 @@ fun ydlLocation(): String {
     }
 }
 
-fun ffmpegLocation() {
-    fun ffmpegExists() {
-        if (system("${currentLocation()}${delimiter}ffmpeg -version") == 0) {
-            ffmpegOk = true
+fun ffmpegLocation(): Boolean {
+    fun ffmpegExists(): Boolean = when {
+        system("\"${currentLocation()}${delimiter}ffmpeg\" -version") == 0 -> {
             ffmpegLocation = Location.DIR
-        } else if (system("ffmpeg -version") == 0) {
-            ffmpegOk = true
+            true
+        }
+        system("ffmpeg -version") == 0 -> {
             ffmpegLocation = Location.PATH
-        } else {
-            ffmpegOk = false
+            true
+        }
+        else -> {
             ffmpegLocation = Location.NONE
+            false
         }
     }
 
-    if (settings.ffmpegLocation == "") {
+    return if (settings.ffmpegLocation == "") {
         ffmpegExists()
     } else {
-        if (system("${settings.ffmpegLocation} -version") == 0) {
-            ffmpegOk = true
+        if (system("\"${settings.ffmpegLocation}\" -version") == 0) {
             ffmpegLocation = Location.SET
+            true
         } else {
             ffmpegExists()
         }
