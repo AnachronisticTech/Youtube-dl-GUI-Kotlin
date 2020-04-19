@@ -100,7 +100,6 @@ fun TabPane.Page.linksPage() = vbox {
                     if (scroll.value != "") {
                         if (!scroll.value.contains("\n")) { scroll.append("\n") }
                         val path = ydlLocation()
-                        ffmpegLocation()
 
                         val links = scroll.value.lines() as MutableList<String>
                         links.removeAll { it == "" || it == "\n" }
@@ -109,14 +108,17 @@ fun TabPane.Page.linksPage() = vbox {
                             if (settings.ignoreErrors) command += " -i"
                             if (settings.noPlaylist) command += " --no-playlist"
                             if (settings.noPartFiles) command += " --no-part"
-                            if (settings.audioFormat != 0 && ffmpegOk) {
-                                command += " -x --audio-format ${AudioFormat.values()[settings.audioFormat].name.toLowerCase()}"
-                                if (settings.keepVideo) command += " -k"
-                                if (ffmpegLocation == Location.SET) command += " --ffmpeg-location \"${settings.ffmpegLocation}\""
-                                if (ffmpegLocation == Location.DIR) command += " --ffmpeg-location \"${currentLocation()}${delimiter}ffmpeg.exe\""
-                            } else if (!ffmpegOk) {
-                                print("FFmpeg was not found on the path, in the current directory, or in the Advanced Settings location.")
-                                return@action
+                            if (settings.audioFormat != 0) {
+                                ffmpegLocation()
+                                if (ffmpegOk) {
+                                    command += " -x --audio-format ${AudioFormat.values()[settings.audioFormat].name.toLowerCase()}"
+                                    if (settings.keepVideo) command += " -k"
+                                    if (ffmpegLocation == Location.SET) command += " --ffmpeg-location \"${settings.ffmpegLocation}\""
+                                    if (ffmpegLocation == Location.DIR) command += " --ffmpeg-location \"${currentLocation()}${delimiter}ffmpeg.exe\""
+                                } else if (!ffmpegOk) {
+                                    print("FFmpeg was not found on the path, in the current directory, or in the Advanced Settings location.")
+                                    return@action
+                                }
                             }
                             if (settings.username != "" && settings.password != "") {
                                 command += " -u ${settings.username} -p ${settings.password}"
