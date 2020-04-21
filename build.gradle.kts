@@ -21,10 +21,19 @@ kotlin {
             linkerOpts("-mwindows")
         }
     }
-    val libuiMain by sourceSets.getting {
-        dependencies {
-            implementation("com.github.msink:libui:0.1.7")
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-native:0.20.0")
+    sourceSets {
+        val libuiMain by getting {
+            dependencies {
+                implementation("com.github.msink:libui:0.1.7")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-native:0.20.0")
+            }
+            kotlin.srcDir("src/libuiMain/kotlin/Common")
+            when {
+                os.isWindows -> kotlin.srcDir("src/libuiMain/kotlin/Windows")
+                os.isMacOsX -> kotlin.srcDir("src/libuiMain/kotlin/MacOS")
+                os.isLinux -> kotlin.srcDir("src/libuiMain/kotlin/Linux")
+                else -> throw Error("Unknown host")
+            }
         }
     }
 }

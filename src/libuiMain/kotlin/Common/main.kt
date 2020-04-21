@@ -32,6 +32,11 @@ val delimiter = when (Platform.osFamily) {
     else -> "/"
 }
 
+val runner = when (Platform.osFamily) {
+    OsFamily.WINDOWS -> WinRunProcess()
+    else -> TODO()
+}
+
 @UnstableDefault
 fun main() = appWindow(
     title = "Youtube-DL GUI",
@@ -125,6 +130,11 @@ fun TabPane.Page.linksPage() = vbox {
                             system(command)
                         }
                     }
+                }
+            }
+            button("Test") {
+                action {
+                    runner.run()
                 }
             }
         }
