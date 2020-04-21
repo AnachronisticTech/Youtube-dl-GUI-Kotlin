@@ -1,7 +1,7 @@
 import libui.ktx.*
 
-class UnixRunProcess: RunProcess() {
-    override fun run() {
+actual class RunProcess() {
+    actual fun run() {
         MsgBox(
             text = "Unix Run",
             details = "Running a unix process"

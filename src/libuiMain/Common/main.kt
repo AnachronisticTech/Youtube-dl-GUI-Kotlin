@@ -32,12 +32,7 @@ val delimiter = when (Platform.osFamily) {
     else -> "/"
 }
 
-val runner = when (Platform.osFamily) {
-    OsFamily.WINDOWS -> WinRunProcess()
-    OsFamily.MACOSX -> UnixRunProcess()
-    OsFamily.LINUX  -> UnixRunProcess()
-    else -> TODO()
-}
+val runner = RunProcess()
 
 @UnstableDefault
 fun main() = appWindow(
@@ -59,7 +54,7 @@ fun main() = appWindow(
         page("Links") {
             linksPage()
         }
-        page("Advanced settings") {
+        page("Advanced getSettings") {
             settingsPage()
         }
     }
@@ -228,7 +223,7 @@ fun TabPane.Page.settingsPage() = vbox {
         label("") {
             stretchy = true
         }
-        button("Save settings as defaults") {
+        button("Save getSettings as defaults") {
             action {
                 memScoped {
                     val jsonData = Json.stringify(Settings.serializer(), settings)

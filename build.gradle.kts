@@ -27,10 +27,10 @@ kotlin {
                 implementation("com.github.msink:libui:0.1.7")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-native:0.20.0")
             }
-            kotlin.srcDir("src/libuiMain/kotlin/Common")
+            kotlin.srcDir("src/libuiMain/Common")
             when {
-                os.isWindows -> kotlin.srcDir("src/libuiMain/kotlin/Windows")
-                os.isUnix -> kotlin.srcDir("src/libuiMain/kotlin/Unix")
+                os.isWindows -> kotlin.srcDir("src/libuiMain/Windows")
+                os.isUnix -> kotlin.srcDir("src/libuiMain/Unix")
                 else -> throw Error("Unknown host")
             }
         }

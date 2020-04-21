@@ -1,7 +1,7 @@
 import libui.ktx.*
 
-class WinRunProcess: RunProcess() {
-    override fun run() {
+actual class RunProcess() {
+    actual fun run() {
         MsgBox(
             text = "Windows Run",
             details = "Running a windows process"
