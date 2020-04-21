@@ -30,8 +30,7 @@ kotlin {
             kotlin.srcDir("src/libuiMain/kotlin/Common")
             when {
                 os.isWindows -> kotlin.srcDir("src/libuiMain/kotlin/Windows")
-                os.isMacOsX -> kotlin.srcDir("src/libuiMain/kotlin/MacOS")
-                os.isLinux -> kotlin.srcDir("src/libuiMain/kotlin/Linux")
+                os.isUnix -> kotlin.srcDir("src/libuiMain/kotlin/Unix")
                 else -> throw Error("Unknown host")
             }
         }

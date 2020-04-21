@@ -34,6 +34,8 @@ val delimiter = when (Platform.osFamily) {
 
 val runner = when (Platform.osFamily) {
     OsFamily.WINDOWS -> WinRunProcess()
+    OsFamily.MACOSX -> UnixRunProcess()
+    OsFamily.LINUX  -> UnixRunProcess()
     else -> TODO()
 }
 
