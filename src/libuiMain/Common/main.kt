@@ -54,7 +54,7 @@ fun main() = appWindow(
         page("Links") {
             linksPage()
         }
-        page("Advanced getSettings") {
+        page("Advanced settings") {
             settingsPage()
         }
     }
@@ -223,7 +223,7 @@ fun TabPane.Page.settingsPage() = vbox {
         label("") {
             stretchy = true
         }
-        button("Save getSettings as defaults") {
+        button("Save settings as defaults") {
             action {
                 memScoped {
                     val jsonData = Json.stringify(Settings.serializer(), settings)
