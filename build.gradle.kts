@@ -26,7 +26,6 @@ kotlin {
             dependencies {
                 implementation("com.github.msink:libui:0.1.7")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-native:0.20.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:1.3.7")
             }
             kotlin.srcDir("src/libuiMain/Common")
             when {

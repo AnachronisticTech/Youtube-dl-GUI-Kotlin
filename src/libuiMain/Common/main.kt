@@ -3,6 +3,9 @@ import platform.posix.*
 import kotlinx.cinterop.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
+import kotlin.native.concurrent.TransferMode
+import kotlin.native.concurrent.Worker
+import kotlin.native.concurrent.freeze
 
 @Serializable
 data class Settings(
@@ -16,6 +19,8 @@ data class Settings(
     var password: String = "",
     var ffmpegLocation: String = ""
 )
+
+data class Struct(val command: String, val controls: List<Any>)
 
 enum class AudioFormat {
     None, Best, AAC, FLAC, MP3, M4A, Opus, Vorbis, Wav;
@@ -32,7 +37,7 @@ val delimiter = when (Platform.osFamily) {
     else -> "/"
 }
 
-val runner = RunProcess()
+val worker = Worker.start()
 
 @UnstableDefault
 fun main() = appWindow(
@@ -90,7 +95,7 @@ fun TabPane.Page.linksPage() = vbox {
             button("Update") {
                 action {
                     val path = ydlLocation()
-                    val code = runner.run("\"$path\" -U -q")
+                    val code = RunProcess().run("\"$path\" -U -q")
                     if (code == 0) {
                         print("Update complete")
                     } else {
@@ -98,9 +103,9 @@ fun TabPane.Page.linksPage() = vbox {
                     }
                 }
             }
-            label("") {
+            val bar = progressbar {
                 stretchy = true
-            }
+            }.freeze()
             button("Download") {
                 action {
                     if (scroll.value != "") {
@@ -115,7 +120,6 @@ fun TabPane.Page.linksPage() = vbox {
                             if (settings.noPlaylist) command += " --no-playlist"
                             if (settings.noPartFiles) command += " --no-part"
                             if (settings.audioFormat != 0) {
-
                                 if (ffmpegLocation()) {
                                     command += " -x --audio-format ${AudioFormat.values()[settings.audioFormat].name.toLowerCase()}"
                                     if (settings.keepVideo) command += " -k"
@@ -129,16 +133,17 @@ fun TabPane.Page.linksPage() = vbox {
                             if (settings.username != "" && settings.password != "") {
                                 command += " -u ${settings.username} -p ${settings.password}"
                             }
-                            val code = runner.run(command)
-                            if (code == 0) {
-                                print("Task complete")
-                            } else {
-                                print("Task failed with code $code")
+                            worker.execute(TransferMode.UNSAFE, { Struct(command.freeze(), listOf(bar, this@button)) }) {
+                                (it.controls[1] as Button).disable()
+                                (it.controls[0] as ProgressBar).value = -1
+                                RunProcess().run(it.command)
+                                (it.controls[0] as ProgressBar).value = 0
+                                (it.controls[1] as Button).enable()
                             }
                         }
                     }
                 }
-            }
+            }.freeze()
         }
     }
     stretchy = true
@@ -255,9 +260,9 @@ fun print(information: String) = MsgBox(
 )
 
 fun ydlLocation(): String {
-    return if (runner.run("youtube-dl --version") != 0) {
+    return if (RunProcess().run("youtube-dl --version") != 0) {
         val localCopy = "\"${currentLocation()}${delimiter}youtube-dl\""
-        if (runner.run("$localCopy --help") != 0) {
+        if (RunProcess().run("$localCopy --help") != 0) {
             MsgBoxError(
                 text = "Youtube-dl not found",
                 details = "You can download it from https://github.com/ytdl-org/youtube-dl/releases."
@@ -272,11 +277,11 @@ fun ydlLocation(): String {
 
 fun ffmpegLocation(): Boolean {
     fun ffmpegExists(): Boolean = when {
-        runner.run("\"${currentLocation()}${delimiter}ffmpeg\" -version") == 0 -> {
+        RunProcess().run("\"${currentLocation()}${delimiter}ffmpeg\" -version") == 0 -> {
             ffmpegLocation = Location.DIR
             true
         }
-        runner.run("ffmpeg -version") == 0 -> {
+        RunProcess().run("ffmpeg -version") == 0 -> {
             ffmpegLocation = Location.PATH
             true
         }
@@ -289,7 +294,7 @@ fun ffmpegLocation(): Boolean {
     return if (settings.ffmpegLocation == "") {
         ffmpegExists()
     } else {
-        if (runner.run("\"${settings.ffmpegLocation}\" -version") == 0) {
+        if (RunProcess().run("\"${settings.ffmpegLocation}\" -version") == 0) {
             ffmpegLocation = Location.SET
             true
         } else {
