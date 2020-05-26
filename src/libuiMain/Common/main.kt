@@ -90,7 +90,12 @@ fun TabPane.Page.linksPage() = vbox {
             button("Update") {
                 action {
                     val path = ydlLocation()
-                    system("\"$path\" -U -q")
+                    val code = runner.run("\"$path\" -U -q")
+                    if (code == 0) {
+                        print("Update complete")
+                    } else {
+                        print("Update failed with code $code")
+                    }
                 }
             }
             label("") {
@@ -124,17 +129,13 @@ fun TabPane.Page.linksPage() = vbox {
                             if (settings.username != "" && settings.password != "") {
                                 command += " -u ${settings.username} -p ${settings.password}"
                             }
-                            system(command)
+                            val code = runner.run(command)
+                            if (code == 0) {
+                                print("Task complete")
+                            } else {
+                                print("Task failed with code $code")
+                            }
                         }
-                    }
-                }
-            }
-            button("Test") {
-                action {
-                    if (runner.run("youtube-dl.exe https://www.youtube.com/watch?v=eveosbnopPA")) {
-                        print("Task complete")
-                    } else {
-                        print("Task failed")
                     }
                 }
             }
@@ -254,9 +255,9 @@ fun print(information: String) = MsgBox(
 )
 
 fun ydlLocation(): String {
-    return if (system("youtube-dl --version") != 0) {
+    return if (runner.run("youtube-dl --version") != 0) {
         val localCopy = "\"${currentLocation()}${delimiter}youtube-dl\""
-        if (system("$localCopy --help") != 0) {
+        if (runner.run("$localCopy --help") != 0) {
             MsgBoxError(
                 text = "Youtube-dl not found",
                 details = "You can download it from https://github.com/ytdl-org/youtube-dl/releases."
@@ -271,11 +272,11 @@ fun ydlLocation(): String {
 
 fun ffmpegLocation(): Boolean {
     fun ffmpegExists(): Boolean = when {
-        system("\"${currentLocation()}${delimiter}ffmpeg\" -version") == 0 -> {
+        runner.run("\"${currentLocation()}${delimiter}ffmpeg\" -version") == 0 -> {
             ffmpegLocation = Location.DIR
             true
         }
-        system("ffmpeg -version") == 0 -> {
+        runner.run("ffmpeg -version") == 0 -> {
             ffmpegLocation = Location.PATH
             true
         }
@@ -288,7 +289,7 @@ fun ffmpegLocation(): Boolean {
     return if (settings.ffmpegLocation == "") {
         ffmpegExists()
     } else {
-        if (system("\"${settings.ffmpegLocation}\" -version") == 0) {
+        if (runner.run("\"${settings.ffmpegLocation}\" -version") == 0) {
             ffmpegLocation = Location.SET
             true
         } else {

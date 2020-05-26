@@ -1,6 +1,6 @@
 plugins {
-    kotlin("multiplatform") version "1.3.70"
-    kotlin("plugin.serialization") version "1.3.70"
+    kotlin("multiplatform") version "1.3.71"
+    kotlin("plugin.serialization") version "1.3.71"
 }
 
 repositories {
@@ -26,6 +26,7 @@ kotlin {
             dependencies {
                 implementation("com.github.msink:libui:0.1.7")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-native:0.20.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-common:1.3.7")
             }
             kotlin.srcDir("src/libuiMain/Common")
             when {
@@ -48,7 +49,7 @@ fun org.jetbrains.kotlin.gradle.plugin.mpp.Executable.windowsResources(rcFileNam
 
         inputs.file(inFile)
         outputs.file(outFile)
-        commandLine("$konanLlvmDir/windres", inFile, "-D_${buildType.name}", "-O", "coff", "-o", outFile)
+        commandLine("$konanLlvmDir/windres", inFile, "-D_${buildType.name}", "-O", "coff", "-o", outFile) //, "-Xmulti-platform"
         environment("PATH", "$konanLlvmDir;${System.getenv("PATH")}")
 
         dependsOn(compilation.compileKotlinTask)
