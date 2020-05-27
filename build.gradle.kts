@@ -62,7 +62,7 @@ tasks.register("buildMacApp") {
     doLast {
         val appName = "YDLGUI"
         val appPath = "$buildDir/bin/libui/releaseExecutable/$appName.app"
-        mkdir("$appPath")
+        mkdir(appPath)
         mkdir("$appPath/Contents")
         mkdir("$appPath/Contents/Resources")
         mkdir("$appPath/Contents/MacOS")

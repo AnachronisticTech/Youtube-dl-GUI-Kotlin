@@ -135,7 +135,7 @@ fun TabPane.Page.linksPage() = vbox {
                         }
 
                         for (link in links) {
-                            var command = "$path $link -o \"$dlLocation$delimiter${settings.filenameTemplate}\"$commandExtras"
+                            val command = "$path $link -o \"$dlLocation$delimiter${settings.filenameTemplate}\"$commandExtras"
                             worker.execute(TransferMode.UNSAFE, { NewThread(command.freeze(), listOf(this@button, updateButton, dlLocationButton), bar) }) { it ->
                                 it.disableControls.map { it.disable() }
                                 it.update.value = -1
