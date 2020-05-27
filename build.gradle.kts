@@ -57,3 +57,23 @@ fun org.jetbrains.kotlin.gradle.plugin.mpp.Executable.windowsResources(rcFileNam
     linkTask.dependsOn(windresTask)
     linkerOpts(outFile.toString())
 }
+
+tasks.register("buildMacApp") {
+    doLast {
+        val appName = "YDLGUI"
+        val appPath = "$buildDir/bin/libui/releaseExecutable/$appName.app"
+        mkdir("$appPath")
+        mkdir("$appPath/Contents")
+        mkdir("$appPath/Contents/Resources")
+        mkdir("$appPath/Contents/MacOS")
+        copy {
+            from("src/libuiMain/resources/Info.plist")
+            into("$appPath/Contents/")
+        }
+        copy {
+            from("$buildDir/bin/libui/releaseExecutable/${rootProject.name}.kexe")
+            into("$appPath/Contents/MacOS/")
+            rename("(.*)", "$appName.kexe")
+        }
+    }
+}
