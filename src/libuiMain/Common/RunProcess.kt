@@ -1,3 +1,3 @@
 expect class RunProcess {
-    fun run(command: String): Boolean
+    fun run(command: String): Int
 }

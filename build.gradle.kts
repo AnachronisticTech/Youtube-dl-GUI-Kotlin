@@ -1,6 +1,6 @@
 plugins {
-    kotlin("multiplatform") version "1.3.70"
-    kotlin("plugin.serialization") version "1.3.70"
+    kotlin("multiplatform") version "1.3.71"
+    kotlin("plugin.serialization") version "1.3.71"
 }
 
 repositories {
@@ -48,7 +48,7 @@ fun org.jetbrains.kotlin.gradle.plugin.mpp.Executable.windowsResources(rcFileNam
 
         inputs.file(inFile)
         outputs.file(outFile)
-        commandLine("$konanLlvmDir/windres", inFile, "-D_${buildType.name}", "-O", "coff", "-o", outFile)
+        commandLine("$konanLlvmDir/windres", inFile, "-D_${buildType.name}", "-O", "coff", "-o", outFile) //, "-Xmulti-platform"
         environment("PATH", "$konanLlvmDir;${System.getenv("PATH")}")
 
         dependsOn(compilation.compileKotlinTask)

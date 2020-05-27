@@ -1,16 +1,15 @@
 import kotlinx.cinterop.*
-import libui.ktx.*
 import platform.windows.*
 
 actual class RunProcess {
-    actual fun run(command: String): Boolean {
+    actual fun run(command: String): Int {
         memScoped {
             val si: STARTUPINFOA = alloc()
             val pi: PROCESS_INFORMATION = alloc()
             si.cb = sizeOf<STARTUPINFOA>().convert()
 
             if (CreateProcessA(
-                "C:\\utils\\youtube-dl.exe",
+                null,
                 command.cstr.getPointer(this),
                 null,
                 null,
@@ -21,28 +20,20 @@ actual class RunProcess {
                 si.ptr,
                 pi.ptr
             ).convert<Int>() == 0) { // If result is 0, CreateProcessA failed
-                MsgBox(
-                    text = "Windows Run Failed",
-                    details = "Failed to execute command $command"
-                )
-                return false
+                return -1
             } else {
                 WaitForSingleObject(pi.hProcess, INFINITE)
                 val exitCode: DWORDVar = alloc()
-                val result = GetExitCodeProcess(pi.hProcess, exitCode.ptr)
+                val result = GetExitCodeProcess(pi.hProcess, exitCode.ptr).convert<Int>()
                 CloseHandle(pi.hProcess)
                 CloseHandle(pi.hThread)
 
-                if (result.convert<Int>() == 0) { // If result is 0, GetExitCodeProcess failed
-                    MsgBox(
-                        text = "Windows Run Failed",
-                        details = "Executed command but couldn't get exit code."
-                    )
+                return if (result == 0) { // If result is 0, GetExitCodeProcess failed
+                    -1
+                } else {
+                    exitCode.value.convert()
                 }
-
-                return true
             }
         }
-
     }
 }
