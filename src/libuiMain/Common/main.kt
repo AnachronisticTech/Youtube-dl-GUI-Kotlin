@@ -20,7 +20,7 @@ data class Settings(
     var ffmpegLocation: String = ""
 )
 
-data class Struct(val command: String, val controls: List<Any>)
+data class NewThread(val command: String, val disableControls: List<Button>, val update: ProgressBar)
 
 enum class AudioFormat {
     None, Best, AAC, FLAC, MP3, M4A, Opus, Vorbis, Wav;
@@ -68,6 +68,8 @@ fun main() = appWindow(
 fun TabPane.Page.linksPage() = vbox {
     var dlLocation = currentLocation()
     lateinit var dlLocationField: TextField
+    lateinit var dlLocationButton: Button
+    lateinit var updateButton: Button
 
     val scroll: TextArea = textarea {
         label("Insert links here:")
@@ -84,7 +86,7 @@ fun TabPane.Page.linksPage() = vbox {
                     dlLocation = this.value
                 }
             }
-            button("Choose location") {
+            dlLocationButton = button("Choose location") {
                 action {
                     dlLocation = OpenFolderDialog() ?: dlLocation
                     dlLocationField.value = dlLocation
@@ -92,7 +94,7 @@ fun TabPane.Page.linksPage() = vbox {
             }
         }
         hbox {
-            button("Update") {
+            updateButton = button("Update") {
                 action {
                     val path = ydlLocation()
                     val code = RunProcess().run("\"$path\" -U -q")
@@ -103,9 +105,7 @@ fun TabPane.Page.linksPage() = vbox {
                     }
                 }
             }
-            val bar = progressbar {
-                stretchy = true
-            }.freeze()
+            val bar = progressbar { stretchy = true }
             button("Download") {
                 action {
                     if (scroll.value != "") {
@@ -114,36 +114,39 @@ fun TabPane.Page.linksPage() = vbox {
 
                         val links = scroll.value.lines() as MutableList<String>
                         links.removeAll { it == "" || it == "\n" }
+
+                        var commandExtras = ""
+                        if (settings.ignoreErrors) commandExtras += " -i"
+                        if (settings.noPlaylist) commandExtras += " --no-playlist"
+                        if (settings.noPartFiles) commandExtras += " --no-part"
+                        if (settings.audioFormat != 0) {
+                            if (ffmpegLocation()) {
+                                commandExtras += " -x --audio-format ${AudioFormat.values()[settings.audioFormat].name.toLowerCase()}"
+                                if (settings.keepVideo) commandExtras += " -k"
+                                if (ffmpegLocation == Location.SET) commandExtras += " --ffmpeg-location \"${settings.ffmpegLocation}\""
+                                if (ffmpegLocation == Location.DIR) commandExtras += " --ffmpeg-location \"${currentLocation()}${delimiter}ffmpeg.exe\""
+                            } else {
+                                print("FFmpeg was not found on the path, in the current directory, or in the Advanced Settings location.")
+                                return@action
+                            }
+                        }
+                        if (settings.username != "" && settings.password != "") {
+                            commandExtras += " -u ${settings.username} -p ${settings.password}"
+                        }
+
                         for (link in links) {
-                            var command = "$path $link -o \"$dlLocation$delimiter${settings.filenameTemplate}\""
-                            if (settings.ignoreErrors) command += " -i"
-                            if (settings.noPlaylist) command += " --no-playlist"
-                            if (settings.noPartFiles) command += " --no-part"
-                            if (settings.audioFormat != 0) {
-                                if (ffmpegLocation()) {
-                                    command += " -x --audio-format ${AudioFormat.values()[settings.audioFormat].name.toLowerCase()}"
-                                    if (settings.keepVideo) command += " -k"
-                                    if (ffmpegLocation == Location.SET) command += " --ffmpeg-location \"${settings.ffmpegLocation}\""
-                                    if (ffmpegLocation == Location.DIR) command += " --ffmpeg-location \"${currentLocation()}${delimiter}ffmpeg.exe\""
-                                } else {
-                                    print("FFmpeg was not found on the path, in the current directory, or in the Advanced Settings location.")
-                                    return@action
-                                }
-                            }
-                            if (settings.username != "" && settings.password != "") {
-                                command += " -u ${settings.username} -p ${settings.password}"
-                            }
-                            worker.execute(TransferMode.UNSAFE, { Struct(command.freeze(), listOf(bar, this@button)) }) {
-                                (it.controls[1] as Button).disable()
-                                (it.controls[0] as ProgressBar).value = -1
+                            var command = "$path $link -o \"$dlLocation$delimiter${settings.filenameTemplate}\"$commandExtras"
+                            worker.execute(TransferMode.UNSAFE, { NewThread(command.freeze(), listOf(this@button, updateButton, dlLocationButton), bar) }) { it ->
+                                it.disableControls.map { it.disable() }
+                                it.update.value = -1
                                 RunProcess().run(it.command)
-                                (it.controls[0] as ProgressBar).value = 0
-                                (it.controls[1] as Button).enable()
+                                it.update.value = 0
+                                it.disableControls.map { it.enable() }
                             }
                         }
                     }
                 }
-            }.freeze()
+            }
         }
     }
     stretchy = true
