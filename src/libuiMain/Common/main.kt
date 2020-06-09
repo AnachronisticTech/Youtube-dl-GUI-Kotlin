@@ -3,9 +3,6 @@ import platform.posix.*
 import kotlinx.cinterop.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
-import kotlin.native.concurrent.TransferMode
-import kotlin.native.concurrent.Worker
-import kotlin.native.concurrent.freeze
 
 @Serializable
 data class Settings(
@@ -19,8 +16,6 @@ data class Settings(
     var password: String = "",
     var ffmpegLocation: String = ""
 )
-
-data class NewThread(val command: String, val disableControls: List<Button>, val update: ProgressBar)
 
 enum class AudioFormat {
     None, Best, AAC, FLAC, MP3, M4A, Opus, Vorbis, Wav;
@@ -37,7 +32,7 @@ val delimiter = when (Platform.osFamily) {
     else -> "/"
 }
 
-val worker = Worker.start()
+val dispatcher = Dispatcher()
 
 @UnstableDefault
 fun main() = appWindow(
@@ -109,6 +104,14 @@ fun TabPane.Page.linksPage() = vbox {
             button("Download") {
                 action {
                     if (scroll.value != "") {
+                        dispatcher.queueFunction {
+                            this@button.disable()
+                            updateButton.disable()
+                            dlLocationButton.disable()
+                            dlLocationField.disable()
+                            bar.value = -1
+                        }
+
                         if (!scroll.value.contains("\n")) { scroll.append("\n") }
                         val path = ydlLocation()
 
@@ -136,13 +139,17 @@ fun TabPane.Page.linksPage() = vbox {
 
                         for (link in links) {
                             val command = "$path $link -o \"$dlLocation$delimiter${settings.filenameTemplate}\"$commandExtras"
-                            worker.execute(TransferMode.UNSAFE, { NewThread(command.freeze(), listOf(this@button, updateButton, dlLocationButton), bar) }) { it ->
-                                it.disableControls.map { it.disable() }
-                                it.update.value = -1
-                                RunProcess().run(it.command)
-                                it.update.value = 0
-                                it.disableControls.map { it.enable() }
+                            dispatcher.queueFunction {
+                                RunProcess().run(command)
                             }
+                        }
+
+                        dispatcher.queueFunction {
+                            this@button.enable()
+                            updateButton.enable()
+                            dlLocationButton.enable()
+                            dlLocationField.enable()
+                            bar.value = 0
                         }
                     }
                 }
@@ -265,7 +272,7 @@ fun print(information: String) = MsgBox(
 fun ydlLocation(): String {
     return if (RunProcess().run("youtube-dl --version") != 0) {
         val localCopy = "\"${currentLocation()}${delimiter}youtube-dl\""
-        if (RunProcess().run("$localCopy --help") != 0) {
+        if (RunProcess().run("$localCopy --version") != 0) {
             MsgBoxError(
                 text = "Youtube-dl not found",
                 details = "You can download it from https://github.com/ytdl-org/youtube-dl/releases."
